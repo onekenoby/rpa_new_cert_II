@@ -117,7 +117,7 @@ will automatically collect the artefacts.
 
 Author: by Stefano Ciotti
 """
-
+from RPA.Assistant import Assistant as Assistant
 from pathlib import Path
 from robocorp.tasks import task
 from robocorp import browser
@@ -127,7 +127,9 @@ from RPA.PDF import PDF
 from RPA.FileSystem import FileSystem
 from RPA.Archive import Archive
 
-# --------------------------------------------------------------------------- #
+
+
+#--------------------------------------------------------------------------- #
 # Constants & paths
 # --------------------------------------------------------------------------- #
 
@@ -157,9 +159,15 @@ def order_robots_from_RobotSpareBin():
     Creates ZIP archive of the receipts and the images.
     
     """
-    browser.configure(slowmo=5,) # set headless=True for prod
-    orders = download_and_read_orders()
+    browser.configure(slowmo=0)
 
+    # 1. Chiedo l’URL all’utente
+    orders_csv_url = URL_CSV #get_user_input_url()          # ← prompt Assistant
+
+    # 2. Scarico e leggo il CSV dall’URL indicato
+    orders = download_and_read_orders(orders_csv_url)
+
+    # 3. Procedo col resto della logica
     open_robot_order_website()
     for order in orders:
         process_single_order(order)
@@ -167,11 +175,21 @@ def order_robots_from_RobotSpareBin():
     archive_receipts()
 
 
+
+
+def get_user_input_url():
+    assistant = Assistant()
+    assistant.add_heading("Robot Orders URL")
+    assistant.add_text_input("orders_url", placeholder="Inserisci l’URL CSV")
+    assistant.add_submit_buttons("Invia", default="Invia")
+    result = assistant.run_dialog()
+    return result.orders_url
+
+
 # --------------------------------------------------------------------------- #
-def download_and_read_orders():
-    """Download the CSV and return a list of dict rows."""
+def download_and_read_orders(url: str):            # ← parametro aggiunto
     csv_target = OUTPUT_DIR / "orders.csv"
-    HTTP().download(URL_CSV, target_file=str(csv_target), overwrite=True)
+    HTTP().download(url, target_file=str(csv_target), overwrite=True)
     return Tables().read_table_from_csv(csv_target, header=True)
 
 def open_robot_order_website():
